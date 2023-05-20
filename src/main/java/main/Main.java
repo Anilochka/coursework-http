@@ -28,7 +28,8 @@ public class Main {
 
         usersRepository = new UsersRepository(session);
 
-        Server server = new Server(8092);
+        Server server = new Server(8094);
+        //сбросить счетчик попыток, запрет доступа 401 без поля ввода
         server.setHandler(context);
 
         server.start();
