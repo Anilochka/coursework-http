@@ -1,4 +1,4 @@
-version: '3.9'
+version: '3.3'
 
 services:
   cassandra:
@@ -24,4 +24,3 @@ services:
 
 networks:
   FM-network:
-    name: FM-network
