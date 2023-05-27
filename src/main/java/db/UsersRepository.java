@@ -8,6 +8,8 @@ import com.datastax.oss.driver.api.core.cql.Row;
 import java.util.ArrayList;
 import java.util.List;
 
+import utils.Utils;
+
 public class UsersRepository {
 
     private final CqlSession session;
@@ -17,20 +19,20 @@ public class UsersRepository {
     }
 
     public List<User> selectAllUsers(String keyspace) {
-        ResultSet resultSet = session.execute("select * from server.userd");
+        ResultSet resultSet = session.execute("select * from server.users");
         List<User> result = new ArrayList<>();
 
         resultSet.forEach(x -> result.add(new User(
                 x.getString("username"),
                 x.getString("realm"),
-                x.getString("HA1")
+                x.getString("ha1")
         )));
 
         return result;
     }
 
     public User getUser(String username, String realm) {
-        PreparedStatement ps = session.prepare("select * from server.userd where username= ? and realm = ?");
+        PreparedStatement ps = session.prepare("select * from server.users where username = ? and realm = ?");
         ResultSet rs = session.execute(ps.bind(username, realm));
 
         for (Row row : rs) {
@@ -40,5 +42,20 @@ public class UsersRepository {
                     row.getString("ha1"));
         }
         return null;
+    }
+
+    public void createTable() {
+        String query = "CREATE TABLE IF NOT EXISTS server.users (\n" +
+                "    username       varchar,\n" +
+                "    realm          varchar,\n" +
+                "    ha1            varchar,\n" +
+                "    PRIMARY KEY ((username), realm)\n" +
+                ");";
+        session.execute(query);
+    }
+
+    public void addUser(String username, String realm, String password) {
+        PreparedStatement ps = session.prepare("insert into server.users (username, realm, ha1) values (?, ?, ?)");
+        session.execute(ps.bind(username, realm, Utils.calculateHA1(username, realm, password)));
     }
 }

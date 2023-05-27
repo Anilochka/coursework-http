@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  cassandra:
+    image: bitnami/cassandra:latest
+    ports:
+      - 9042:9042
+    volumes:
+      - ~/apps/cassandra:/bitnami
+      - ./data/cql:/docker-entrypoint-initdb.d
+    hostname: cassandra-node-1
+    networks:
+      - FM-network
+    environment:
+      - CASSANDRA_CLUSTER_NAME=FM-cluster
+      - CASSANDRA_USER=cassandra
+      - CASSANDRA_PASSWORD=cassandra
+      - CASSANDRA_HOST=cassandra-node-1
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra" ]
+      interval: 1m
+      timeout: 15s
+      retries: 5
+
+networks:
+  FM-network:
+    name: FM-network

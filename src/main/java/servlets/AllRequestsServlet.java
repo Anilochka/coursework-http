@@ -23,8 +23,8 @@ public class AllRequestsServlet extends HttpServlet {
     private final String realm = "example.com";
     private final String privateKey = "ei4hj3k7nk2o3pb0pfofk1n78rzxftg";
     Map<String, String> nonces = new ConcurrentSkipListMap<>();
-    Map<String, TryingCount> tryCount = new ConcurrentSkipListMap<>();
-    private static final int MAX_TRY_COUNT = 3;
+    Map<String, TryingCount> attemptsCount = new ConcurrentSkipListMap<>();
+    private static final int MAX_ATTEMPTS_COUNT = 3;
 
     public AllRequestsServlet() {
     }
@@ -42,57 +42,58 @@ public class AllRequestsServlet extends HttpServlet {
             nonces.put(clientIp, calculateNonce(clientIp));
             response.addHeader("WWW-Authenticate", getAuthenticateHeader(nonces.get(clientIp)));
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-        } else if (authHeader.startsWith("Digest")) {
-            HashMap<String, String> headerValues = parseHeader(authHeader);
-            String username = headerValues.get("username");
-            String realm1 = headerValues.get("realm");
-            if (!tryCount.containsKey(clientIp) || !Objects.equals(tryCount.get(clientIp).username, username)) {
-                tryCount.put(clientIp, new TryingCount(username, 0));
-            } else {
-                int count = tryCount.get(clientIp).tryingCount + 1;
-                tryCount.put(clientIp, new TryingCount(username, count));
-            }
-            if (username == null || username.isEmpty() || realm1 == null || realm1.isEmpty()) {
-                nonces.put(clientIp, calculateNonce(clientIp));
-                int count = tryCount.get(clientIp).tryingCount;
-                if (count < MAX_TRY_COUNT) {
-                    response.addHeader("WWW-Authenticate", getAuthenticateHeader(nonces.get(clientIp)));
-                }
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
-            }
-            User user = Main.usersRepository.getUser(username, realm1);
-            if (user == null) {
-                nonces.put(clientIp, calculateNonce(clientIp));
-                int count = tryCount.get(clientIp).tryingCount;
-                if (count < MAX_TRY_COUNT) {
-                    response.addHeader("WWW-Authenticate", getAuthenticateHeader(nonces.get(clientIp)));
-                }
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
-            }
-            String ha1 = user.getHA1();
-
-            String method = request.getMethod();
-            String reqURI = headerValues.get("uri");
-            String ha2 = DigestUtils.md5Hex(method + ":" + reqURI);
-            String nonce = nonces.get(clientIp);
-            nonces.remove(clientIp);
-
-            String serverResponse = DigestUtils.md5Hex(ha1 + ":" + nonce + ":" + ha2);
-            String clientResponse = headerValues.get("response");
-
-            if (!serverResponse.equals(clientResponse)) {
-                nonces.put(clientIp, calculateNonce(clientIp));
-                int count = tryCount.get(clientIp).tryingCount;
-                if (count < MAX_TRY_COUNT) {
-                    response.addHeader("WWW-Authenticate", getAuthenticateHeader(nonces.get(clientIp)));
-                }
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            }
-        } else {
+            return;
+        } else if (!authHeader.startsWith("Digest")) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, " This Servlet only supports Digest Authorization");
+            return;
         }
+
+        HashMap<String, String> headerValues = parseHeader(authHeader);
+        String username = headerValues.get("username");
+        String realm1 = headerValues.get("realm");
+        if (!attemptsCount.containsKey(clientIp) || !Objects.equals(attemptsCount.get(clientIp).username, username)) {
+            attemptsCount.put(clientIp, new TryingCount(username, 0));
+        } else {
+            int count = attemptsCount.get(clientIp).tryingCount + 1;
+            attemptsCount.put(clientIp, new TryingCount(username, count));
+        }
+        if (username == null || username.isEmpty() || realm1 == null || realm1.isEmpty()) {
+            refreshNonceAndCheckAttemptsCount(response, clientIp);
+            return;
+        }
+        User user = Main.usersRepository.getUser(username, realm1);
+        if (user == null) {
+            refreshNonceAndCheckAttemptsCount(response, clientIp);
+            return;
+        }
+        String ha1 = user.getHA1();
+
+        String method = request.getMethod();
+        String reqURI = headerValues.get("uri");
+        String ha2 = DigestUtils.md5Hex(method + ":" + reqURI);
+        String nonce = nonces.get(clientIp);
+        nonces.remove(clientIp);
+
+        String serverResponse = DigestUtils.md5Hex(ha1 + ":" + nonce + ":" + ha2);
+        String clientResponse = headerValues.get("response");
+
+        if (!serverResponse.equals(clientResponse)) {
+            nonces.put(clientIp, calculateNonce(clientIp));
+            int count = attemptsCount.get(clientIp).tryingCount;
+            if (count < MAX_ATTEMPTS_COUNT) {
+                response.addHeader("WWW-Authenticate", getAuthenticateHeader(nonces.get(clientIp)));
+            }
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        }
+    }
+
+    private void refreshNonceAndCheckAttemptsCount(HttpServletResponse response, String clientIp) throws IOException {
+        nonces.put(clientIp, calculateNonce(clientIp));
+        int count = attemptsCount.get(clientIp).tryingCount;
+        if (count < MAX_ATTEMPTS_COUNT) {
+            response.addHeader("WWW-Authenticate", getAuthenticateHeader(nonces.get(clientIp)));
+        }
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 
     private HashMap<String, String> parseHeader(String headerString) {

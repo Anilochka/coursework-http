@@ -27,9 +27,14 @@ public class Main {
                         .build();
 
         usersRepository = new UsersRepository(session);
+        usersRepository.createTable();
+        usersRepository.addUser("usm", "example.com", "password");
+
+        if (args != null && args.length == 4 && "add".equals(args[0])) {
+            usersRepository.addUser(args[1], args[2], args[3]);
+        }
 
         Server server = new Server(8094);
-        //сбросить счетчик попыток, запрет доступа 401 без поля ввода
         server.setHandler(context);
 
         server.start();
