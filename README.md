@@ -13,6 +13,6 @@ _export JAVA_HOME=/*dir*/jdk-11_
    _mvn compile_  
 3. Запуск:  
    _mvn exec:java -Dexec.mainClass="main.Main"_    
-Также можно запустить, передав параметры "add _username realm password_", где username, password - данные 
+Также можно запустить, передав параметры "add _username example.com password_", где username, password - данные 
 пользователя для добавления в БД:  
    _mvn exec:java -Dexec.mainClass="main.Main" -Dexec.args="add username example.com password"_
