@@ -14,5 +14,9 @@ _export JAVA_HOME=/*dir*/jdk-11_
 3. Запуск:  
    _mvn exec:java -Dexec.mainClass="main.Main"_    
 Также можно запустить, передав параметры "add _username example.com password_", где username, password - данные 
-пользователя для добавления в БД:  
-   _mvn exec:java -Dexec.mainClass="main.Main" -Dexec.args="add username example.com password"_
+пользователя для добавления в БД. Пользователь, параметры еоторого были переданы, будет добавлен в БД (для добавления нескольких пользователей требуется запустить сервер нескольео раз, передавая за раз параметры одного пользователя):  
+   _mvn exec:java -Dexec.mainClass="main.Main" -Dexec.args="add username example.com password"_  
+
+Сервис работает на порту 8094. После введения корректных данных пользователя доступны следующие ресурсы:  
+- "/page.html" (GET, PUT - при вводе сообщения в поле и нажатии кнопки)  
+- "/" (GET)
