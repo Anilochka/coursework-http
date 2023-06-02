@@ -1,8 +1,8 @@
 Digest-аутентификация на примере HTTP-сервера  
 Для работы с проектом требуется jdk-11. Установить и настроить ее можно следующими командами:  
 _curl https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_linux-x64_bin.tar.gz | tar -xz_  
-_export PATH=/*dir*/jdk-11:$PATH_  
-_export JAVA_HOME=/*dir*/jdk-11_  
+_export PATH=~/jdk-11:$PATH_ (путь до папки с jdk-11)  
+_export JAVA_HOME=~/jdk-11_ (путь до папки с jdk-11)  
 
 Для запуска сервера требуется перейти в директорию проекта и выполнить следующие команды:
 1. Развертывание БД:  
